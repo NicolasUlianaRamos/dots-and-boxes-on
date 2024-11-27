@@ -131,7 +131,33 @@ def game_loop():
         while not message_queue.empty():
             state = message_queue.get()
 
+        # Verifica se o jogo acabou
+        if state["game_over"]:
+            show_winner()
+
         draw_board()
+
+# Mostra o vencedor na tela
+def show_winner():
+    screen.fill((255, 255, 255))
+    font = pygame.font.SysFont(None, 72)
+
+    if state["scores"][0] > state["scores"][1]:
+        text = font.render("Player 1 Wins!", True, (255, 0, 0))
+    elif state["scores"][1] > state["scores"][0]:
+        text = font.render("Player 2 Wins!", True, (0, 0, 255))
+    else:
+        text = font.render("It's a Tie!", True, (128, 128, 128))
+
+    text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    screen.blit(text, text_rect)
+    pygame.display.flip()
+
+    # Aguarda 5 segundos e fecha o jogo
+    pygame.time.wait(5000)
+    pygame.quit()
+    sys.exit()
+
 
 # Inicialização
 data = client.recv(4096)

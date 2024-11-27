@@ -64,7 +64,7 @@ def handle_client(client, player_id):
 
                 # Verifica fim de jogo
                 if all(all(box is not None for box in row) for row in state["boxes"]):
-                    state["game_over"] = True
+                    state["game_over"] = is_game_over(state)
 
                 # Atualiza todos os clientes
                 broadcast_state()
@@ -72,6 +72,12 @@ def handle_client(client, player_id):
             print(f"Jogador {player_id} desconectado.")
             clients.remove(client)
             break
+
+def is_game_over(state):
+    for row in state["boxes"]:
+        if None in row:
+            return False
+    return True
 
 # Configuração principal do servidor
 def main():
