@@ -20,7 +20,6 @@ state = {
     "players": ["", ""]
 }
 
-
 clients = []
 
 # Arquivo para armazenar nicknames e status (simulação de banco de dados)
@@ -60,7 +59,7 @@ def handle_client(client, player_id):
         state["players"][player_id - 1] = nickname
 
         # Atualiza o banco de dados com o novo jogador
-        database = load_database()  # Carrega o banco de dados atual
+        database = load_database()
         exists = any(player["nickname"] == nickname for player in database["players"])
 
         if not exists:
@@ -100,7 +99,8 @@ def handle_client(client, player_id):
                 broadcast_state()
         except:
             print(f"Jogador {player_id} desconectado.")
-            clients.remove(client)
+            if client in clients:  # Verifica se o cliente ainda está na lista
+                clients.remove(client)
             break
 
 # Verifica se o jogo acabou e calcula o vencedor
@@ -111,7 +111,6 @@ def is_game_over(state):
         if state["scores"][0] > state["scores"][1]:
             state["winner"] = 1
 
-            # Verifica se o nickname já existe no banco de dados
             for player in database["players"]:
                 if player["nickname"] == state["players"][0]:
                     player["pontuacao"] += 3
@@ -123,7 +122,6 @@ def is_game_over(state):
         elif state["scores"][1] > state["scores"][0]:
             state["winner"] = 2
 
-            # Verifica se o nickname já existe no banco de dados
             for player in database["players"]:
                 if player["nickname"] == state["players"][1]:
                     player["pontuacao"] += 3
@@ -133,7 +131,6 @@ def is_game_over(state):
             print("Jogador " + state["players"][1] + " venceu!")
         else:
             state["winner"] = 0  # Empate
-
             print("O jogo empatou")
         return True
     return False
@@ -151,23 +148,48 @@ def check_boxes():
                     completed_box = True
     return completed_box
 
-# Configuração principal do servidor
+# Configuração principal do servidor com reinício
 def main():
-    global clients
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind((HOST, PORT))
-    server.listen(2)
-    print("Servidor aguardando conexões...")
+    global clients, state
 
-    player_id = 1
-    while len(clients) < 2:
-        client, addr = server.accept()
-        print(f"Jogador {player_id} conectado de: {addr}")
-        clients.append(client)
-        threading.Thread(target=handle_client, args=(client, player_id)).start()
-        player_id += 1
+    while True:
+        # Resetando o estado e a lista de clientes para reiniciar o jogo
+        state = {
+            "horizontal_lines": [[False] * (GRID_SIZE - 1) for _ in range(GRID_SIZE)],
+            "vertical_lines": [[False] * GRID_SIZE for _ in range(GRID_SIZE - 1)],
+            "boxes": [[None] * (GRID_SIZE - 1) for _ in range(GRID_SIZE - 1)],
+            "scores": [0, 0],
+            "player_turn": 1,
+            "game_over": False,
+            "players": ["", ""]
+        }
+        clients = []
 
-    print("Dois jogadores conectados. Jogo iniciado.")
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.bind((HOST, PORT))
+        server.listen(2)
+        print("Servidor aguardando conexões...")
+
+        player_id = 1
+        while len(clients) < 2:
+            client, addr = server.accept()
+            print(f"Jogador {player_id} conectado de: {addr}")
+            clients.append(client)
+            threading.Thread(target=handle_client, args=(client, player_id)).start()
+            player_id += 1
+
+        print("Dois jogadores conectados. Jogo iniciado.")
+
+        # Aguarde até o jogo terminar
+        while not state["game_over"]:
+            pass
+
+        print("Jogo terminado. Reiniciando servidor...")
+
+        # Fecha todas as conexões com os clientes
+        for client in clients:
+            client.close()
+        server.close()
 
 if __name__ == "__main__":
     main()
