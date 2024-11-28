@@ -1,3 +1,4 @@
+# client.py
 import pygame
 import socket
 import pickle
@@ -13,6 +14,10 @@ PORT = 5555
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((HOST, PORT))
 
+# Obtém nickname do jogador
+nickname = input("Digite seu nickname: ")
+client.send(nickname.encode('utf-8'))
+
 # Inicializa o Pygame
 pygame.init()
 
@@ -23,6 +28,7 @@ DOT_RADIUS = 10
 MARGIN = 50
 CELL_SIZE = (WIDTH - 2 * MARGIN) // (GRID_SIZE - 1)
 LINE_WIDTH = 5
+
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Dots and Boxes")
@@ -116,6 +122,7 @@ def game_loop():
     global state
     threading.Thread(target=socket_thread, daemon=True).start()  # Inicia thread de socket
 
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -137,14 +144,14 @@ def game_loop():
 
         draw_board()
 
-# Mostra o vencedor na tela
 def show_winner():
     screen.fill((255, 255, 255))
     font = pygame.font.SysFont(None, 72)
 
-    if state["scores"][0] > state["scores"][1]:
+    # Verifica o vencedor com base no estado vindo do servidor
+    if state["winner"] == 1:
         text = font.render("Player 1 Wins!", True, (255, 0, 0))
-    elif state["scores"][1] > state["scores"][0]:
+    elif state["winner"] == 2:
         text = font.render("Player 2 Wins!", True, (0, 0, 255))
     else:
         text = font.render("It's a Tie!", True, (128, 128, 128))
@@ -159,10 +166,11 @@ def show_winner():
     sys.exit()
 
 
+
 # Inicialização
 data = client.recv(4096)
 initial_data = pickle.loads(data)
 player_id = initial_data["player_id"]
 state = initial_data["state"]
 
-game_loop()
+
